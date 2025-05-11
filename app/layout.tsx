@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { WalletProvider } from "@/hooks/use-wallet"
 import { ThemeProvider } from "@/components/theme-provider"
+import { VantaSettingsProvider } from "@/hooks/use-vanta-settings"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -22,7 +23,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <WalletProvider>{children}</WalletProvider>
+          <VantaSettingsProvider>
+            <WalletProvider>{children}</WalletProvider>
+          </VantaSettingsProvider>
         </ThemeProvider>
       </body>
     </html>
