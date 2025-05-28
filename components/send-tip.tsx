@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2, AlertCircle, CheckCircle2, Send } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import TransactionConfirmationModal from "./transaction-confirmation-modal"
 
 interface SendTipProps {
   contract: ethers.Contract | null
@@ -31,6 +32,8 @@ export default function SendTip({ contract, account, provider, signer, onSuccess
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [gasEstimate, setGasEstimate] = useState("")
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [pendingTransaction, setPendingTransaction] = useState<any>(null)
 
   const resetForm = () => {
     setRecipient("")
@@ -90,60 +93,53 @@ export default function SendTip({ contract, account, provider, signer, onSuccess
   const sendTip = async () => {
     if (!validateForm() || !provider || !signer) return
 
-    try {
-      setLoading(true)
-      setError("")
-      setSuccess("")
-
-      const amountInWei = ethers.parseEther(amount)
-
-      // Check if user has enough balance
-      const balance = await provider.getBalance(account)
-
-      if (balance < amountInWei) {
-        setError("Insufficient balance")
-        return
-      }
-
-      let tx
-
-      // If contract is not initialized, send a direct transfer
-      if (!contract) {
-        tx = await signer.sendTransaction({
-          to: recipient,
-          value: amountInWei,
-        })
-      } else {
-        // Send the tip using the contract
-        tx = await contract.sendTip(recipient, message, {
-          value: amountInWei,
-        })
-      }
-
-      // Wait for the transaction to be mined
-      await tx.wait()
-
-      // Show success message
-      const shortRecipient = `${recipient.substring(0, 6)}...${recipient.substring(38)}`
-      setSuccess(`Successfully sent ${amount} ${currencySymbol} to ${shortRecipient}`)
-
-      // Show toast notification
-      toast({
-        title: "Tip Sent Successfully",
-        description: `You sent ${amount} ${currencySymbol} to ${shortRecipient}`,
-      })
-
-      // Call the onSuccess callback to refresh data
-      onSuccess()
-
-      // Reset form after successful transaction
-      resetForm()
-    } catch (err) {
-      console.error("Error sending tip:", err)
-      setError(err instanceof Error ? err.message : "Failed to send tip")
-    } finally {
-      setLoading(false)
+    // Prepare transaction details
+    const transactionDetails = {
+      recipient,
+      amount,
+      message,
+      estimatedGas: gasEstimate,
     }
+
+    setPendingTransaction(transactionDetails)
+    setShowConfirmModal(true)
+  }
+
+  const executeTip = async () => {
+    if (!validateForm() || !provider || !signer) return
+
+    const amountInWei = ethers.parseEther(amount)
+
+    // Check if user has enough balance
+    const balance = await provider.getBalance(account)
+
+    if (balance < amountInWei) {
+      throw new Error("Insufficient balance")
+    }
+
+    let tx
+
+    // If contract is not initialized, send a direct transfer
+    if (!contract) {
+      tx = await signer.sendTransaction({
+        to: recipient,
+        value: amountInWei,
+      })
+    } else {
+      // Send the tip using the contract
+      tx = await contract.sendTip(recipient, message, {
+        value: amountInWei,
+      })
+    }
+
+    // Wait for the transaction to be mined
+    await tx.wait()
+
+    // Call the onSuccess callback to refresh data
+    onSuccess()
+
+    // Reset form after successful transaction
+    resetForm()
   }
 
   return (
@@ -248,6 +244,16 @@ export default function SendTip({ contract, account, provider, signer, onSuccess
           )}
         </Button>
       </CardFooter>
+      <TransactionConfirmationModal
+        isOpen={showConfirmModal}
+        onClose={() => {
+          setShowConfirmModal(false)
+          setPendingTransaction(null)
+        }}
+        onConfirm={executeTip}
+        transactionDetails={pendingTransaction || { recipient: "", amount: "", message: "" }}
+        currencySymbol={currencySymbol}
+      />
     </Card>
   )
 }
