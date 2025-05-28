@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2, AlertCircle, CheckCircle2, Copy, ExternalLink } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/components/ui/use-toast"
+import ImageUpload from "./image-upload"
 import type { ethers } from "ethers"
 
 interface ProfileSectionProps {
@@ -28,6 +30,7 @@ export default function ProfileSection({ contract, account }: ProfileSectionProp
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [profileExists, setProfileExists] = useState(false)
+  const [uploadMethod, setUploadMethod] = useState<"upload" | "url">("upload")
 
   useEffect(() => {
     if (contract && account) {
@@ -52,6 +55,13 @@ export default function ProfileSection({ contract, account }: ProfileSectionProp
           setBio(profile.bio)
           setProfileImage(profile.profileImage)
           setProfileExists(true)
+
+          // Determine upload method based on existing image
+          if (profile.profileImage.startsWith("data:image/")) {
+            setUploadMethod("upload")
+          } else if (profile.profileImage.startsWith("http")) {
+            setUploadMethod("url")
+          }
         }
       } catch (profileErr: any) {
         // Check if this is the "Profile does not exist" error
@@ -184,16 +194,36 @@ export default function ProfileSection({ contract, account }: ProfileSectionProp
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="profileImage">Profile Image URL</Label>
-                <Input
-                  id="profileImage"
-                  placeholder="https://example.com/your-image.jpg"
-                  value={profileImage}
-                  onChange={(e) => setProfileImage(e.target.value)}
-                  disabled={saving}
-                />
-                <p className="text-xs text-muted-foreground">Enter a URL to your profile image</p>
+              {/* Profile Image Section */}
+              <div className="space-y-4">
+                <Tabs value={uploadMethod} onValueChange={(value) => setUploadMethod(value as "upload" | "url")}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="upload">Upload Image</TabsTrigger>
+                    <TabsTrigger value="url">Image URL</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="upload" className="space-y-4">
+                    <ImageUpload
+                      currentImage={uploadMethod === "upload" ? profileImage : ""}
+                      onImageChange={(imageData) => setProfileImage(imageData)}
+                      maxSizeKB={300}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="url" className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="profileImageUrl">Profile Image URL</Label>
+                      <Input
+                        id="profileImageUrl"
+                        placeholder="https://example.com/your-image.jpg"
+                        value={uploadMethod === "url" ? profileImage : ""}
+                        onChange={(e) => setProfileImage(e.target.value)}
+                        disabled={saving}
+                      />
+                      <p className="text-xs text-muted-foreground">Enter a URL to your profile image</p>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
             </>
           )}
