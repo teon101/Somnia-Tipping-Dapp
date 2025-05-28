@@ -1,99 +1,78 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Wallet, ChevronDown, LogOut, ExternalLink, Copy, AlertTriangle } from "lucide-react"
-import { useWallet } from "@/hooks/use-wallet"
-import { formatAddress, NETWORK_CONFIG } from "@/lib/contract"
+import { Wallet, Loader2 } from "lucide-react"
 
-export default function WalletConnect() {
-  const {
-    address,
-    balance,
-    isConnected,
-    isConnecting,
-    isCorrectNetwork,
-    connectWallet,
-    disconnectWallet,
-    switchNetwork,
-  } = useWallet()
+interface WalletConnectProps {
+  onConnect: () => void
+  isLoading: boolean
+  currencySymbol: string
+}
 
-  const copyAddress = () => {
-    if (address) {
-      navigator.clipboard.writeText(address)
-    }
-  }
-
-  const viewOnExplorer = () => {
-    if (address) {
-      window.open(`${NETWORK_CONFIG.blockExplorerUrls[0]}/address/${address}`, "_blank")
-    }
-  }
-
-  if (!isConnected) {
-    return (
-      <Button
-        className="bg-purple-600 text-white hover:bg-purple-700 relative overflow-hidden group"
-        onClick={connectWallet}
-        disabled={isConnecting}
-      >
-        <span className="relative z-10 flex items-center">
-          <Wallet className="mr-2 h-4 w-4" />
-          {isConnecting ? "Connecting..." : "Connect Wallet"}
-        </span>
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/40 to-purple-500/0 translate-x-[-100%] group-hover:animate-shimmer"></div>
-      </Button>
-    )
-  }
-
+export default function WalletConnect({ onConnect, isLoading, currencySymbol }: WalletConnectProps) {
   return (
-    <div className="flex items-center gap-4">
-      {!isCorrectNetwork && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="border-amber-500/20 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
-          onClick={switchNetwork}
-        >
-          <AlertTriangle className="mr-2 h-4 w-4" />
-          Switch to Somnia
-        </Button>
-      )}
-
-      <div className="hidden items-center gap-2 rounded-lg border border-purple-500/20 bg-card px-3 py-1.5 text-sm text-card-foreground shadow-sm shadow-purple-500/10 md:flex">
-        <span className="text-muted-foreground">Balance:</span>
-        <span className="font-medium">{balance ? Number(balance).toFixed(4) : "0.0000"} STT</span>
+    <div className="flex flex-col items-center">
+      <div className="mb-6">
+        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 mx-auto">
+          <Wallet className="w-8 h-8 text-primary" />
+        </div>
+        <p className="text-center text-muted-foreground mb-2">
+          To use this DApp, you need to connect your Ethereum wallet.
+        </p>
+        <p className="text-center text-sm text-muted-foreground">
+          Make sure you have MetaMask or another compatible wallet installed.
+        </p>
       </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="border-purple-500/20 bg-card shadow-sm shadow-purple-500/10">
-            <div className={`mr-2 h-2 w-2 rounded-full ${isCorrectNetwork ? "bg-green-500" : "bg-amber-500"}`}></div>
-            <span>{address ? formatAddress(address) : "0x0000...0000"}</span>
-            <ChevronDown className="ml-2 h-4 w-4 text-muted-foreground" />
+      <Button size="lg" onClick={onConnect} disabled={isLoading} className="w-full mb-8">
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Connecting...
+          </>
+        ) : (
+          <>
+            <Wallet className="mr-2 h-5 w-5" />
+            Connect Wallet
+          </>
+        )}
+      </Button>
+
+      <div className="w-full">
+        <h3 className="text-lg font-semibold mb-4 text-center">Manual Network Configuration</h3>
+        <p className="text-sm text-muted-foreground mb-4 text-center">
+          If automatic connection fails, add these details to your wallet manually:
+        </p>
+
+        <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+          <div className="flex justify-between">
+            <span className="text-sm text-muted-foreground">Network Name:</span>
+            <span className="text-sm font-medium">Somnia Testnet</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-sm text-muted-foreground">RPC URL:</span>
+            <span className="text-sm font-medium font-mono">https://dream-rpc.somnia.network/</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-sm text-muted-foreground">Chain ID:</span>
+            <span className="text-sm font-medium">50312 (0xC498 in hex)</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-sm text-muted-foreground">Currency Symbol:</span>
+            <span className="text-sm font-medium">{currencySymbol}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-sm text-muted-foreground">Block Explorer:</span>
+            <span className="text-sm font-medium">https://shannon-explorer.somnia.network</span>
+          </div>
+        </div>
+
+        <div className="mt-4 text-center">
+          <Button variant="link" className="text-sm">
+            Add Somnia Testnet automatically ↗
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem onClick={copyAddress}>
-            <Copy className="mr-2 h-4 w-4" />
-            <span>Copy Address</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={viewOnExplorer}>
-            <ExternalLink className="mr-2 h-4 w-4" />
-            <span>View on Explorer</span>
-          </DropdownMenuItem>
-          {!isCorrectNetwork && (
-            <DropdownMenuItem onClick={switchNetwork}>
-              <AlertTriangle className="mr-2 h-4 w-4" />
-              <span>Switch to Somnia</span>
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem onClick={disconnectWallet}>
-            <LogOut className="mr-2 h-4 w-4" />
-            <span>Disconnect</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </div>
+      </div>
     </div>
   )
 }
